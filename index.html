@@ -23,15 +23,14 @@ canvas{background:var(--fondo-canvas);border:0}
 #filtros b{color:var(--txt)}
 #filtros label{display:block;cursor:pointer;user-select:none}
 #filtros label.dis{opacity:.35;cursor:default}
-#filtros input{accent-color:var(--acento);vertical-align:middle;margin-right:5px}
-.shead{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;line-height:1.6}
+#filtros input{accent-color:var(--acento);width:13px;height:13px;vertical-align:middle;margin:0 5px 0 0}
+.shead{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;line-height:1.6;margin-bottom:4px}
 .stitle{display:flex;align-items:center}
 .master{accent-color:var(--acento);width:13px;height:13px;margin:0 5px 0 0;vertical-align:middle;cursor:pointer;flex:none}
 .delta{color:var(--acento);font-size:21px;line-height:1}
 .sub{margin-top:8px;padding-top:6px;border-top:1px solid var(--borde-suave)}
 .shead b{font-size:13px;color:var(--blanco)}
 .sub:first-child{margin-top:0;padding-top:0;border-top:0}
-.tit{color:var(--tenue);margin-top:3px}
 .n{color:var(--tenue);margin-left:3px}
 #selFila{display:flex;gap:6px;align-items:center;margin-bottom:4px}
 #selNombre{flex:1;min-width:0;background:transparent;color:var(--blanco);border:0;outline:0;font:bold 14px 'Courier New',monospace;padding:2px 0}
@@ -56,7 +55,6 @@ canvas{background:var(--fondo-canvas);border:0}
 </div></div>
 <div class="sub"><div class="shead" data-s="Satélites"><span class="stitle"><input type="checkbox" class="master" data-master="sat" checked title="Activar/desactivar objetos orbitales"><b>Objetos Orbitales</b></span><span class="delta">&#9662;</span></div>
 <div>
-<div class="tit">Tipo</div>
 <label><input type="checkbox" data-k="tipo" value="PAYLOAD" checked>Satélites<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="DEBRIS" checked>Restos (DEB)<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="ROCKET BODY" checked>Cohetes (RB)<span class="n"></span></label>
