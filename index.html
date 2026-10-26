@@ -24,6 +24,8 @@ canvas{background:var(--fondo-canvas);border:0}
 #filtros label.dis{opacity:.35;cursor:default}
 #filtros input{accent-color:var(--acento);vertical-align:middle;margin-right:5px}
 .shead{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.stitle{display:flex;align-items:center;gap:6px}
+.master{accent-color:var(--acento);margin:0;vertical-align:middle;cursor:pointer}
 .delta{color:var(--acento);font-size:21px;line-height:1}
 .sub{margin-top:8px;padding-top:6px;border-top:1px solid var(--borde-suave)}
 .shead b{font-size:14px;color:var(--blanco)}
@@ -45,28 +47,27 @@ canvas{background:var(--fondo-canvas);border:0}
 <div id="head"><div id="reloj"></div><div id="titulo">OBSERVATORIO URITORCO</div><div id="subt">Registro diario de objetos orbitales</div></div>
 <div id="side">
 <div id="filtros" class="sec">
-<div class="sub"><div class="shead" data-s="Astros"><b>Astros</b><span class="delta">&#9662;</span></div>
+<div class="sub"><div class="shead" data-s="Astros"><span class="stitle"><input type="checkbox" class="master" data-master="astro" checked title="Activar/desactivar astros"><b>Astros</b></span><span class="delta">&#9662;</span></div>
 <div>
 <label><input type="checkbox" data-k="astro" value="SISTEMA" checked>Sistema Solar<span class="n"></span></label>
 <label><input type="checkbox" data-k="astro" value="ESTRELLAS" checked>Estrellas<span class="n"></span></label>
 <label><input type="checkbox" data-k="astro" value="CONSTEL" checked>Constelaciones<span class="n"></span></label>
 <label><input type="checkbox" data-k="astro" value="PROFUNDO" checked>Espacio Profundo<span class="n"></span></label>
 </div></div>
-<div class="sub"><div class="shead" data-s="Satélites"><b>Satélites</b><span class="delta">&#9662;</span></div>
+<div class="sub"><div class="shead" data-s="Satélites"><span class="stitle"><input type="checkbox" class="master" data-master="sat" checked title="Activar/desactivar satélites"><b>Satélites</b></span><span class="delta">&#9662;</span></div>
 <div>
 <div class="tit">Tipo</div>
 <label><input type="checkbox" data-k="tipo" value="PAYLOAD" checked>Satélites<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="DEBRIS" checked>Restos (DEB)<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="ROCKET BODY" checked>Cohetes (RB)<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="UNKNOWN" checked>Sin clasificar<span class="n"></span></label>
+<label><input type="checkbox" data-k="star" value="1">Solo Starlink<span class="n"></span></label>
+<label><input type="checkbox" data-k="vis" value="1">Solo visibles<span class="n"></span></label>
 <div class="tit">Tamaño</div>
 <div class="row2">
 <label><input type="checkbox" data-k="rcs" value="LARGE" checked>Large<span class="n"></span></label>
 <label><input type="checkbox" data-k="rcs" value="MEDIUM" checked>Medium<span class="n"></span></label>
 </div>
-<div class="tit">Otros</div>
-<label><input type="checkbox" data-k="star" value="1">Solo Starlink<span class="n"></span></label>
-<label><input type="checkbox" data-k="vis" value="1">Solo visibles<span class="n"></span></label>
 </div></div>
 </div>
 <div id="sel" class="sec">
@@ -177,7 +178,10 @@ function sierra(rellenar) {
 
 // ---------------- FILTROS ----------------
 const FILTROS = { tipo: new Set(), rcs: new Set(), star: new Set(), vis: new Set(), astro: new Set() };
-const cbs = [...document.querySelectorAll('#filtros input')];
+const cbs = [...document.querySelectorAll('#filtros input:not([data-master])')];
+const masters = [...document.querySelectorAll('#filtros input[data-master]')];
+const hijos = m => cbs.filter(c => m.dataset.master === 'astro' ? c.dataset.k === 'astro' : c.dataset.k !== 'astro');
+function sincronizarMasters() { masters.forEach(m => { m.checked = hijos(m).some(c => c.checked); }); }
 try { const g = JSON.parse(localStorage.getItem('sat_filtros') || 'null'); if (g) cbs.forEach(c => { if (g.includes(c.dataset.k + ':' + c.value) || g.includes('-' + c.dataset.k + ':' + c.value)) c.checked = g.includes(c.dataset.k + ':' + c.value); }); } catch (e) {}
 function leerFiltros() {
   const cb = k => cbs.find(c => c.dataset.k === k);
@@ -185,13 +189,26 @@ function leerFiltros() {
   FILTROS.tipo.clear(); FILTROS.rcs.clear(); FILTROS.star.clear(); FILTROS.vis.clear(); FILTROS.astro.clear();
   cbs.forEach(c => { if (c.checked) FILTROS[c.dataset.k].add(c.value); });
   const star = FILTROS.star.size > 0, vis = FILTROS.vis.size > 0;
-  cbs.forEach(c => {   // cada "solo" deshabilita todo lo demás (incluido el otro "solo")
+  cbs.forEach(c => {   // los "solo" solo afectan a los satélites; Astros queda independiente
+    if (c.dataset.k === 'astro') { c.disabled = false; c.parentElement.classList.remove('dis'); return; }
     const off = c.dataset.k === 'vis' ? star : c.dataset.k === 'star' ? vis : (star || vis);
     c.disabled = off; c.parentElement.classList.toggle('dis', off);
   });
+  sincronizarMasters();
   try { localStorage.setItem('sat_filtros', JSON.stringify(cbs.map(c => (c.checked ? '' : '-') + c.dataset.k + ':' + c.value))); } catch (e) {}
 }
 cbs.forEach(c => c.addEventListener('change', () => { leerFiltros(); if (objs.length) tick(); }));
+masters.forEach(m => {
+  m.addEventListener('click', e => e.stopPropagation());   // no plegar la sección al tocar el check
+  m.addEventListener('change', () => {
+    hijos(m).forEach(c => {
+      c.checked = (m.dataset.master === 'sat' && (c.dataset.k === 'star' || c.dataset.k === 'vis')) ? false : m.checked;
+      c.disabled = false;
+    });
+    leerFiltros();
+    if (objs.length) tick();
+  });
+});
 leerFiltros();
 document.querySelectorAll('.shead').forEach(h => {
   const body = h.nextElementSibling, d = h.querySelector('.delta'), key = 'sat_plegado_' + h.dataset.s;
@@ -406,8 +423,7 @@ function tick() {
   const oscuro = solEl < CFG.solOscuro;
   const esOjo = (o, rng) => oscuro && o.orbita === 'LEO' && (o.rcs === 'LARGE' || (o.rcs === 'MEDIUM' && rng < CFG.rngMedKm));
   ctx.clearRect(0, 0, W, H); grilla();
-  const soloSat = FILTROS.star.size > 0 || FILTROS.vis.size > 0;   // con un "solo" activo se ocultan los astros
-  const cnt = {}, ac = dibujarAstros(ms, su, oscuro, !soloSat);
+  const cnt = {}, ac = dibujarAstros(ms, su, oscuro, true);
   for (const k in ac) cnt['astro:' + k] = ac[k];
 
   const dentro = []; dibujados = [];
