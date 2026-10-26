@@ -14,7 +14,8 @@ html,body{margin:0;height:100%;background:var(--fondo);color:var(--txt);font-fam
 .sec{padding:8px 10px;border-bottom:1px solid var(--borde);box-sizing:border-box}
 canvas{background:var(--fondo-canvas);border:0}
 #reloj{position:absolute;left:12px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;text-align:left;line-height:1.25}
-#reloj .fecha,#reloj .hora{font-size:22px;font-weight:bold}
+#reloj .fecha{font-size:17.6px;font-weight:bold}
+#reloj .hora{font-size:22px;font-weight:bold}
 #tip{position:fixed;display:none;background:rgba(0,0,0,.85);border:1px solid var(--borde);padding:2px 6px;font-size:12px;pointer-events:none;z-index:9;white-space:nowrap}
 #msg{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-size:14px}
 .ok{color:var(--ok)}
@@ -23,15 +24,14 @@ canvas{background:var(--fondo-canvas);border:0}
 #filtros label{display:block;cursor:pointer;user-select:none}
 #filtros label.dis{opacity:.35;cursor:default}
 #filtros input{accent-color:var(--acento);vertical-align:middle;margin-right:5px}
-.shead{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
-.stitle{display:flex;align-items:center;gap:6px}
-.master{accent-color:var(--acento);margin:0;vertical-align:middle;cursor:pointer}
+.shead{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;line-height:1.6}
+.stitle{display:flex;align-items:center}
+.master{accent-color:var(--acento);width:13px;height:13px;margin:0 5px 0 0;vertical-align:middle;cursor:pointer;flex:none}
 .delta{color:var(--acento);font-size:21px;line-height:1}
 .sub{margin-top:8px;padding-top:6px;border-top:1px solid var(--borde-suave)}
-.shead b{font-size:14px;color:var(--blanco)}
+.shead b{font-size:13px;color:var(--blanco)}
 .sub:first-child{margin-top:0;padding-top:0;border-top:0}
 .tit{color:var(--tenue);margin-top:3px}
-.row2{display:flex;gap:14px} .row2 label{display:inline-block}
 .n{color:var(--tenue);margin-left:3px}
 #selFila{display:flex;gap:6px;align-items:center;margin-bottom:4px}
 #selNombre{flex:1;min-width:0;background:transparent;color:var(--blanco);border:0;outline:0;font:bold 14px 'Courier New',monospace;padding:2px 0}
@@ -47,27 +47,24 @@ canvas{background:var(--fondo-canvas);border:0}
 <div id="head"><div id="reloj"></div><div id="titulo">OBSERVATORIO URITORCO</div><div id="subt">Registro diario de objetos orbitales</div></div>
 <div id="side">
 <div id="filtros" class="sec">
-<div class="sub"><div class="shead" data-s="Astros"><span class="stitle"><input type="checkbox" class="master" data-master="astro" checked title="Activar/desactivar astros"><b>Astros</b></span><span class="delta">&#9662;</span></div>
+<div class="sub"><div class="shead" data-s="Astros"><span class="stitle"><input type="checkbox" class="master" data-master="astro" checked title="Activar/desactivar cuerpos celestes"><b>Cuerpos Celestes</b></span><span class="delta">&#9662;</span></div>
 <div>
 <label><input type="checkbox" data-k="astro" value="SISTEMA" checked>Sistema Solar<span class="n"></span></label>
 <label><input type="checkbox" data-k="astro" value="ESTRELLAS" checked>Estrellas<span class="n"></span></label>
 <label><input type="checkbox" data-k="astro" value="CONSTEL" checked>Constelaciones<span class="n"></span></label>
 <label><input type="checkbox" data-k="astro" value="PROFUNDO" checked>Espacio Profundo<span class="n"></span></label>
 </div></div>
-<div class="sub"><div class="shead" data-s="Satélites"><span class="stitle"><input type="checkbox" class="master" data-master="sat" checked title="Activar/desactivar satélites"><b>Satélites</b></span><span class="delta">&#9662;</span></div>
+<div class="sub"><div class="shead" data-s="Satélites"><span class="stitle"><input type="checkbox" class="master" data-master="sat" checked title="Activar/desactivar objetos orbitales"><b>Objetos Orbitales</b></span><span class="delta">&#9662;</span></div>
 <div>
 <div class="tit">Tipo</div>
 <label><input type="checkbox" data-k="tipo" value="PAYLOAD" checked>Satélites<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="DEBRIS" checked>Restos (DEB)<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="ROCKET BODY" checked>Cohetes (RB)<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="UNKNOWN" checked>Sin clasificar<span class="n"></span></label>
+<label><input type="checkbox" data-k="rcs" value="LARGE" checked>Grandes<span class="n"></span></label>
+<label><input type="checkbox" data-k="rcs" value="MEDIUM" checked>Medianos<span class="n"></span></label>
 <label><input type="checkbox" data-k="star" value="1">Solo Starlink<span class="n"></span></label>
 <label><input type="checkbox" data-k="vis" value="1">Solo visibles<span class="n"></span></label>
-<div class="tit">Tamaño</div>
-<div class="row2">
-<label><input type="checkbox" data-k="rcs" value="LARGE" checked>Large<span class="n"></span></label>
-<label><input type="checkbox" data-k="rcs" value="MEDIUM" checked>Medium<span class="n"></span></label>
-</div>
 </div></div>
 </div>
 <div id="sel" class="sec">
