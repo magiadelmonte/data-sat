@@ -17,7 +17,8 @@
   "az0": 40,
   "el0": 15,
   "fovH": 48.5,
-  "fovV": 28.5
+  "fovV": 28.5,
+  "elMin": 12.0
  },
  "cerro": {
   "opacidadCerro": 0.7,
