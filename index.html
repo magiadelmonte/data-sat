@@ -301,15 +301,15 @@ function radecEnu(ra, dec, yrs, gmst) {   // AR/Dec J2000 (°) -> vector ENU uni
   const H = gmst + lo - ra2, cd = Math.cos(de2), sd = Math.sin(de2);
   return [-cd * Math.sin(H), sd * cp - cd * sp * Math.cos(H), sd * sp + cd * cp * Math.cos(H)];
 }
-function dibujarAstros(ms, su, oscuro, dibuja) {   // dibuja=false: solo cuenta (con un "solo" activo)
+function dibujarAstros(ms, su, dibuja) {   // dibuja=false: solo cuenta (con un "solo" activo)
   const j = jdOf(ms), gm = gmstOf(j), T = (j - 2451545) / 36525, yrs = T * 100, cn = { SISTEMA: 0, ESTRELLAS: 0, CONSTEL: 0, PROFUNDO: 0 };
-  const dim = oscuro ? 1 : 0.3; estrDib = [];
+  const dim = 1; estrDib = [];   // misma opacidad de día y de noche
   const dentroP = (p, m) => p && p[0] >= -(m || 0) && p[0] <= W + (m || 0) && p[1] >= -(m || 0) && p[1] <= H + (m || 0);
   const rotulo = (p, nom, dx, col, a) => { ctx.globalAlpha = a; ctx.fillStyle = col; ctx.font = '11px Courier New'; ctx.fillText(nom, p[0] + dx, p[1] + 4); ctx.globalAlpha = 1; };
   const on = k => dibuja && FILTROS.astro.has(k);
   // constelaciones (líneas al 50% de la intensidad anterior)
   const tc = on('CONSTEL'), vis = {};
-  if (tc) { ctx.globalAlpha = oscuro ? CFG.constelAlfa.noche : CFG.constelAlfa.dia; ctx.strokeStyle = CFG.col.constel; ctx.lineWidth = 0.8; ctx.setLineDash([]); }
+  if (tc) { ctx.globalAlpha = CFG.constelAlfa; ctx.strokeStyle = CFG.col.constel; ctx.lineWidth = 0.8; ctx.setLineDash([]); }
   for (const id in CONSTEL.l) {
     for (const seg of CONSTEL.l[id]) {
       ctx.beginPath(); let pen = false;
@@ -324,7 +324,7 @@ function dibujarAstros(ms, su, oscuro, dibuja) {   // dibuja=false: solo cuenta 
   }
   for (const id in vis) if (vis[id][2] >= 2) cn.CONSTEL++;
   if (tc) {
-    ctx.globalAlpha = oscuro ? 0.7 : 0.2; ctx.fillStyle = CFG.col.constel; ctx.font = '12px Courier New';
+    ctx.globalAlpha = 0.7; ctx.fillStyle = CFG.col.constel; ctx.font = '12px Courier New';
     for (const id in vis) { const t = vis[id]; if (t[2] < 2) continue; const nom = CONSTEL.n[id][0].toUpperCase(); ctx.fillText(nom, t[0] / t[2] - ctx.measureText(nom).width / 2, t[1] / t[2]); }
   }
   ctx.globalAlpha = 1;
@@ -418,7 +418,7 @@ function tick() {
   const oscuro = solEl < CFG.solOscuro;
   const esOjo = (o, rng) => oscuro && o.orbita === 'LEO' && (o.rcs === 'LARGE' || (o.rcs === 'MEDIUM' && rng < CFG.rngMedKm));
   ctx.clearRect(0, 0, W, H); grilla();
-  const cnt = {}, ac = dibujarAstros(ms, su, oscuro, true);
+  const cnt = {}, ac = dibujarAstros(ms, su, true);
   for (const k in ac) cnt['astro:' + k] = ac[k];
 
   const dentro = []; dibujados = [];
@@ -445,8 +445,8 @@ function tick() {
     const pas = [], fut = [];
     for (let t = -CFG.estelaPasadoS; t <= 0; t += CFG.estelaPasoS) { const q = posicion(o, ms + t * 1000, su); pas.push(q && q.ilum ? q.v : null); }
     for (let t = 0; t <= CFG.estelaFuturoS; t += CFG.estelaPasoS) { const q = posicion(o, ms + t * 1000, su); fut.push(q && q.ilum ? q.v : null); }
-    const a0 = oscuro ? 1 : 0.45; ctx.globalAlpha = a0;
-    trazar(pas, col, null, 0.8); ctx.globalAlpha = a0 * 0.5; trazar(fut, col, [3, 4], 0.8); ctx.globalAlpha = a0;
+    ctx.globalAlpha = 1;
+    trazar(pas, col, null, 0.8); ctx.globalAlpha = 0.5; trazar(fut, col, [3, 4], 0.8); ctx.globalAlpha = 1;
     ctx.fillStyle = col; ctx.beginPath(); ctx.arc(d.px[0], d.px[1], radio(o, rng), 0, 6.2832); ctx.fill();
     ctx.fillText(o.nombre, d.px[0] + 7, d.px[1] - 6);
     const rr = radio(o, rng); dibujados.push({ o, lx: d.px[0] + 7, ly: d.px[1] - 6, lw: ctx.measureText(o.nombre).width });
@@ -466,7 +466,7 @@ function iniciar(doc) {
   msg(''); resize(); tick(); setInterval(tick, CFG.actualizarMs);
 }
 function pedirArchivo() {
-  msg('No se pudo cargar ' + CFG.json + ' (¿abriste el HTML desde el disco?).<br>Elegí el archivo manualmente:<br><br><input type="file" accept=".json" id="fi">');
+  msg('No se pudo cargar ' + CFG.json.replace('{fecha}', fechaCandidatos(0)) + ' (¿abriste el HTML desde el disco?).<br>Elegí el archivo manualmente:<br><br><input type="file" accept=".json" id="fi">');
   document.getElementById('fi').onchange = e => {
     const r = new FileReader(); r.onload = () => iniciar(JSON.parse(r.result)); r.readAsText(e.target.files[0]);
   };
@@ -479,11 +479,23 @@ function aplicarConfig() {
   document.getElementById('subt').textContent = CFG.subtitulo;
   derivar(); dibujarMapa(null);
 }
+// El JSON de candidatos lleva la fecha en el nombre (`sat_candidatos_<AAAAMMDD>.json`)
+// y se busca el más reciente: se prueba desde hoy hacia atrás DIAS_JSON días.
+const DIAS_JSON = 7;
+function fechaCandidatos(off) {
+  const d = new Date(); d.setDate(d.getDate() - off);
+  return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+}
+function pedirCandidatos(i) {
+  const url = CFG.json.replace('{fecha}', fechaCandidatos(i));
+  return fetch(url).then(r => r.ok ? r : (i + 1 < DIAS_JSON ? pedirCandidatos(i + 1) : Promise.reject(new Error(url))));
+}
 function arrancar() {
   fetch(CONFIG_URL).then(r => { if (!r.ok) throw 0; return r.json(); })
     .then(c => { CFG = {}; for (const g in c) { if (g === 'colores') CFG.col = c[g]; else if (g === 'css') CFG.css = c[g]; else Object.assign(CFG, c[g]); } aplicarConfig(); })
     .then(() => fetch(CFG.catalogo)).then(r => r.json()).then(c => { ESTRELLAS = c.estrellas; ESTR = c.estr; NOMBRES = c.nom || {}; PROFUNDO = c.profundo; CONSTEL = c.constel; }).catch(e => { if (!CFG.lat) throw e; })
-    .then(() => fetch(CFG.json)).then(r => r.json()).then(iniciar)
+    .then(() => CFG.json.includes('{fecha}') ? pedirCandidatos(0) : fetch(CFG.json).then(r => { if (!r.ok) throw 0; return r; }))
+    .then(r => r.json()).then(iniciar)
     .catch(() => { if (CFG.lat) pedirArchivo(); else msg('No se pudo cargar ' + CONFIG_URL + '.'); });
 }
 addEventListener('resize', () => { resize(); });

@@ -5,7 +5,7 @@
   "subtitulo": "Registro diario de objetos orbitales"
  },
  "archivos": {
-  "json": "sat_candidatos.json",
+  "json": "sat_candidatos_{fecha}.json",
   "catalogo": "catalogo_astro.json"
  },
  "observador": {
@@ -292,10 +292,7 @@
   }
  },
  "astros": {
-  "constelAlfa": {
-   "noche": 0.225,
-   "dia": 0.06
-  }
+  "constelAlfa": 0.225
  },
  "colores": {
   "txt": "#d4c9b0",
