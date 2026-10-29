@@ -280,7 +280,8 @@
   "puntoPorDecada": 2.5,
   "brilloRef": 1e-06,
   "brilloMin": 1.1111111111111112e-08,
-  "brilloMax": 0.00025
+  "brilloMax": 0.00025,
+  "tz": "America/Argentina/Buenos_Aires"
  },
  "satelites": {
   "rngMedKm": 1000,

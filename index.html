@@ -15,7 +15,13 @@ html,body{margin:0;height:100%;background:var(--fondo);color:var(--txt);font-fam
 canvas{background:var(--fondo-canvas);border:0}
 #reloj{position:absolute;left:12px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;text-align:left;line-height:1.25}
 #reloj .fecha{font-size:17.6px;font-weight:bold}
+#reloj .linea{display:flex;align-items:center;gap:10px}
 #reloj .hora{font-size:22px;font-weight:bold}
+#reloj .ctrl{display:flex;gap:4px}
+#reloj button{background:transparent;color:var(--txt);border:1px solid var(--borde);border-radius:3px;cursor:pointer;font:15px 'Courier New',monospace;line-height:1;padding:3px 6px}
+#reloj button:hover:not(:disabled){color:var(--blanco);border-color:var(--acento)}
+#reloj button:disabled{opacity:.3;cursor:default}
+#reloj button.on{color:var(--acento);border-color:var(--acento)}
 #tip{position:fixed;display:none;background:rgba(0,0,0,.85);border:1px solid var(--borde);padding:2px 6px;font-size:12px;pointer-events:none;z-index:9;white-space:nowrap}
 #msg{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-size:14px}
 .ok{color:var(--ok)}
@@ -43,7 +49,7 @@ canvas{background:var(--fondo-canvas);border:0}
 </head>
 <body>
 <div id="w"><canvas id="c"></canvas></div>
-<div id="head"><div id="reloj"></div><div id="titulo">OBSERVATORIO URITORCO</div><div id="subt">Registro diario de objetos orbitales</div></div>
+<div id="head"><div id="reloj"><div class="fecha"></div><div class="linea"><div class="hora"></div><div class="ctrl"><button id="btnPausa" type="button" title="Pausar en este instante" aria-label="Pausar">&#10074;&#10074;</button><button id="btnPlay" type="button" title="Reanudar con la hora actual" aria-label="Reanudar" disabled>&#9654;</button></div></div></div><div id="titulo">OBSERVATORIO URITORCO</div><div id="subt">Registro diario de objetos orbitales</div></div>
 <div id="side">
 <div id="filtros" class="sec">
 <div class="sub"><div class="shead" data-s="Astros"><span class="stitle"><input type="checkbox" class="master" data-master="astro" checked title="Activar/desactivar cuerpos celestes"><b>Cuerpos Celestes</b></span><span class="delta">&#9662;</span></div>
@@ -419,8 +425,28 @@ function radio(o, rng) {   // radio del punto según brillo relativo (escala log
 function mostrarConteos(cnt) {   // cantidad de objetos en cuadro que corresponde a cada filtro
   cbs.forEach(c => { const n = c.parentElement.querySelector('.n'); if (n) n.textContent = '(' + (cnt[c.dataset.k + ':' + c.value] || 0) + ')'; });
 }
+// ---------------- RELOJ Y PAUSA ----------------
+// La hora se muestra siempre en Argentina (UTC-3), no en la zona del equipo.
+const TZ_AR = 'America/Argentina/Buenos_Aires';
+const relojFecha = document.querySelector('#reloj .fecha');
+const relojHora = document.querySelector('#reloj .hora');
+const btnPausa = document.getElementById('btnPausa');
+const btnPlay = document.getElementById('btnPlay');
+let pausado = false, msPausa = 0;
+function estadoBotones() { btnPausa.classList.toggle('on', pausado); btnPlay.disabled = !pausado; }
+btnPausa.addEventListener('click', () => {
+  if (pausado) return;
+  pausado = true; msPausa = Date.now(); estadoBotones(); tick();   // congela este instante
+});
+btnPlay.addEventListener('click', () => {
+  if (!pausado) return;
+  pausado = false; estadoBotones(); tick();                        // retoma con la hora actual
+});
+estadoBotones();
+
 function tick() {
-  const ms = Date.now(), s = sunEci(jdOf(ms)), sn = Math.hypot(s[0], s[1], s[2]), su = s.map(x => x / sn);
+  const ms = pausado ? msPausa : Date.now();
+  const s = sunEci(jdOf(ms)), sn = Math.hypot(s[0], s[1], s[2]), su = s.map(x => x / sn);
   const solEl = Math.asin(enu(teme2ecef(s, gmstOf(jdOf(ms))))[2]) / D2R;
   const oscuro = solEl < CFG.solOscuro;
   const esOjo = (o, rng) => oscuro && o.orbita === 'LEO' && (o.rcs === 'LARGE' || (o.rcs === 'MEDIUM' && rng < CFG.rngMedKm));
@@ -462,15 +488,16 @@ function tick() {
   }
   sierra(true);   // el cerro tapa lo que pasa detrás
   if (selId.value) panelSel(ms, su);
-  const dt = new Date(ms);
-  document.getElementById('reloj').innerHTML = '<div class="fecha">' + dt.toLocaleDateString('es-AR') + '</div><div class="hora">' + dt.toLocaleTimeString('es-AR', { hour12: false }) + '</div>';
+  const dt = new Date(ms), tz = CFG.tz || TZ_AR;
+  relojFecha.textContent = dt.toLocaleDateString('es-AR', { timeZone: tz });
+  relojHora.textContent = dt.toLocaleTimeString('es-AR', { hour12: false, timeZone: tz });
 }
 
 // ---------------- ARRANQUE ----------------
 const msg = t => { document.getElementById('msg').innerHTML = t || ''; };
 function iniciar(doc) {
   objs = doc.objetos.map(x => ({ norad: x[0], nombre: x[1], tipo: x[2], rcs: x[3], orbita: x[4], lm: x[3] === 'LARGE' || x[3] === 'MEDIUM', star: /STARLINK/i.test(x[1]), rec: satellite.twoline2satrec(x[5], x[6]) }));
-  msg(''); resize(); tick(); setInterval(tick, CFG.actualizarMs);
+  msg(''); resize(); tick(); setInterval(() => { if (!pausado) tick(); }, CFG.actualizarMs);
 }
 function pedirArchivo() {
   msg('No se pudo cargar ' + CFG.json.replace('{fecha}', fechaCandidatos(0)) + ' (¿abriste el HTML desde el disco?).<br>Elegí el archivo manualmente:<br><br><input type="file" accept=".json" id="fi">');
@@ -490,8 +517,13 @@ function aplicarConfig() {
 // y se busca el más reciente: se prueba desde hoy hacia atrás DIAS_JSON días.
 const DIAS_JSON = 7;
 function fechaCandidatos(off) {
-  const d = new Date(); d.setDate(d.getDate() - off);
-  return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  // Fecha calendario en Argentina (no la del equipo que abre la página).
+  const tz = CFG.tz || TZ_AR;
+  const partes = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric',
+    month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const v = t => Number(partes.find(p => p.type === t).value);
+  const d = new Date(Date.UTC(v('year'), v('month') - 1, v('day') - off, 12));
+  return d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, '0') + String(d.getUTCDate()).padStart(2, '0');
 }
 function pedirCandidatos(i) {
   const url = CFG.json.replace('{fecha}', fechaCandidatos(i));
