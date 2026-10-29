@@ -488,7 +488,7 @@ function fechaCandidatos(off) {
 }
 function pedirCandidatos(i) {
   const url = CFG.json.replace('{fecha}', fechaCandidatos(i));
-  return fetch(url).then(r => r.ok ? r : (i + 1 < DIAS_JSON ? pedirCandidatos(i + 1) : Promise.reject(new Error(url))));
+  return fetch(url, { cache: 'no-store' }).then(r => r.ok ? r : (i + 1 < DIAS_JSON ? pedirCandidatos(i + 1) : Promise.reject(new Error(url))));
 }
 function arrancar() {
   fetch(CONFIG_URL).then(r => { if (!r.ok) throw 0; return r.json(); })
