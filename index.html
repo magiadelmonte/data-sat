@@ -38,6 +38,7 @@ canvas{background:var(--fondo-canvas);border:0}
 .shead b{font-size:13px;color:var(--blanco)}
 .sub:first-child{margin-top:0;padding-top:0;border-top:0}
 .n{color:var(--tenue);margin-left:3px}
+.fgrupo{margin:5px 0 1px;color:var(--tenue);font-size:11px;letter-spacing:1px;text-transform:uppercase}
 #selFila{display:flex;gap:6px;align-items:center;margin-bottom:4px}
 #selNombre{flex:1;min-width:0;background:transparent;color:var(--blanco);border:0;outline:0;font:bold 14px 'Courier New',monospace;padding:2px 0}
 #selNombre::placeholder{color:var(--tenue);font-weight:normal}
@@ -61,12 +62,14 @@ canvas{background:var(--fondo-canvas);border:0}
 </div></div>
 <div class="sub"><div class="shead" data-s="Satélites"><span class="stitle"><input type="checkbox" class="master" data-master="sat" checked title="Activar/desactivar objetos orbitales"><b>Objetos Orbitales</b></span><span class="delta">&#9662;</span></div>
 <div>
+<div class="fgrupo" id="gfTipo">Tipo</div>
 <label><input type="checkbox" data-k="tipo" value="PAYLOAD" checked>Satélites<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="DEBRIS" checked>Restos (DEB)<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="ROCKET BODY" checked>Cohetes (RB)<span class="n"></span></label>
 <label><input type="checkbox" data-k="tipo" value="UNKNOWN" checked>Sin clasificar<span class="n"></span></label>
-<label><input type="checkbox" data-k="rcs" value="LARGE" checked>Grandes<span class="n"></span></label>
-<label><input type="checkbox" data-k="rcs" value="MEDIUM" checked>Medianos<span class="n"></span></label>
+<div class="fgrupo" id="gfRcs">Tamaño (RCS)</div>
+<label title="Tamaño radar (RCS) del objeto. Se combina con el tipo: se dibujan los que cumplen tipo y tamaño."><input type="checkbox" data-k="rcs" value="LARGE" checked>Grandes<span class="n"></span></label>
+<label title="Tamaño radar (RCS) del objeto. Se combina con el tipo: se dibujan los que cumplen tipo y tamaño."><input type="checkbox" data-k="rcs" value="MEDIUM" checked>Medianos<span class="n"></span></label>
 <label><input type="checkbox" data-k="star" value="1">Solo Starlink<span class="n"></span></label>
 <label><input type="checkbox" data-k="vis" value="1">Solo visibles<span class="n"></span></label>
 </div></div>
@@ -422,8 +425,12 @@ function radio(o, rng) {   // radio del punto según brillo relativo (escala log
   const r = 2 + CFG.puntoPorDecada * Math.log10(b / CFG.brilloRef);
   return Math.max(CFG.puntoMin, Math.min(CFG.puntoMax, r));
 }
-function mostrarConteos(cnt) {   // cantidad de objetos en cuadro que corresponde a cada filtro
+function mostrarConteos(cnt) {   // cantidad de objetos dibujados que corresponde a cada filtro
   cbs.forEach(c => { const n = c.parentElement.querySelector('.n'); if (n) n.textContent = '(' + (cnt[c.dataset.k + ':' + c.value] || 0) + ')'; });
+  // Una categoría sin nada marcado no restringe: se avisa para que no parezca que falla.
+  const gt = document.getElementById('gfTipo'), gr = document.getElementById('gfRcs');
+  if (gt) gt.textContent = FILTROS.tipo.size ? 'Tipo' : 'Tipo (todos)';
+  if (gr) gr.textContent = FILTROS.rcs.size ? 'Tamaño (RCS)' : 'Tamaño (RCS, todos)';
 }
 // ---------------- RELOJ Y PAUSA ----------------
 // La hora se muestra siempre en Argentina (UTC-3), no en la zona del equipo.
@@ -463,10 +470,13 @@ function tick() {
     const px = pix(p.v);
     if (!(px && px[0] >= 0 && px[0] <= W && px[1] >= 0 && px[1] <= H)) continue;
     const ojo = esOjo(o, p.v[3]);
-    if (o.lm) { suma('tipo:' + o.tipo); suma('rcs:' + o.rcs); }
+    if (!pasaFiltro(o) || (FILTROS.vis.size && !ojo)) continue;
+    // Los contadores son de lo que realmente se dibuja: así siempre suman igual
+    // (tipo y tamaño describen el mismo conjunto) y coinciden con la pantalla.
+    suma('tipo:' + o.tipo); suma('rcs:' + o.rcs);
     if (o.star) suma('star:1');
     if (ojo) suma('vis:1');
-    if (pasaFiltro(o) && (!FILTROS.vis.size || ojo)) dentro.push({ o, p, px });
+    dentro.push({ o, p, px });
   }
   mostrarConteos(cnt);
   ctx.font = '11px Courier New';
