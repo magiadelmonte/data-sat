@@ -281,7 +281,8 @@
   "brilloRef": 1e-06,
   "brilloMin": 1.1111111111111112e-08,
   "brilloMax": 0.00025,
-  "tz": "America/Argentina/Buenos_Aires"
+  "tz": "America/Argentina/Buenos_Aires",
+  "ultima": "2026-10-30T12:40:00-03:00"
  },
  "satelites": {
   "rngMedKm": 1000,
