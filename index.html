@@ -8,19 +8,19 @@
 html,body{margin:0;height:100%;background:var(--fondo);color:var(--txt);font-family:'Courier New',monospace;overflow:hidden}
 #w{margin-left:240px;margin-top:78px;width:calc(100vw - 240px);height:calc(100vh - 78px);display:flex;align-items:center;justify-content:center}
 #head{position:fixed;left:0;top:0;right:0;height:78px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid var(--borde);z-index:6;background:var(--fondo);text-align:center}
-#titulo{font-size:28px;font-weight:bold;letter-spacing:4px;line-height:1.2}
+#titulo{font-size:clamp(14px,2vw,22px);font-weight:bold;letter-spacing:2px;line-height:1.2}
 #subt{font-size:14px;color:var(--tenue);margin-top:4px;letter-spacing:1px}
 #subt a{color:var(--acento);text-decoration:none}
 #subt a:hover{text-decoration:underline}
 #side{position:fixed;left:0;top:78px;bottom:0;width:240px;box-sizing:border-box;display:flex;flex-direction:column;border-right:1px solid var(--borde);z-index:5;background:var(--fondo);overflow:hidden}
 .sec{padding:8px 10px;border-bottom:1px solid var(--borde);box-sizing:border-box}
 canvas{background:var(--fondo-canvas);border:0}
-#reloj{position:absolute;left:12px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;text-align:left;line-height:1.25}
+#reloj{position:absolute;left:12px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;text-align:left;line-height:1.15}
 #reloj .fecha{font-size:17.6px;font-weight:bold}
 #reloj .linea{display:flex;align-items:center;gap:10px}
 #reloj .hora{font-size:22px;font-weight:bold}
 #reloj .ctrl{display:flex;gap:4px}
-#reloj .real{font-size:12px;color:var(--tenue);margin-top:2px;font-variant-numeric:tabular-nums}
+#reloj .real{font-size:22px;color:var(--tenue);margin-top:0;font-variant-numeric:tabular-nums}
 #reloj button{background:transparent;color:var(--txt);border:1px solid var(--borde);border-radius:3px;cursor:pointer;font:15px 'Courier New',monospace;line-height:1;padding:3px 6px}
 #reloj button:hover:not(:disabled){color:var(--blanco);border-color:var(--acento)}
 #reloj button:disabled{opacity:.3;cursor:default}
@@ -53,7 +53,7 @@ canvas{background:var(--fondo-canvas);border:0}
 </head>
 <body>
 <div id="w"><canvas id="c"></canvas></div>
-<div id="head"><div id="reloj"><div class="fecha"></div><div class="linea"><div class="hora"></div><div class="ctrl"><button id="btnPausa" type="button" title="Pausar en este instante" aria-label="Pausar">&#10074;&#10074;</button></div></div><div class="real" title="Hora real (no se pausa)"></div></div><div id="titulo">MAGIA DEL MONTE</div><div id="subt">Objetos Orbitales en FOV Observatorio Uritorco</div></div>
+<div id="head"><div id="reloj"><div class="fecha"></div><div class="linea"><div class="hora"></div><div class="ctrl"><button id="btnPausa" type="button" title="Pausar en este instante" aria-label="Pausar">&#10074;&#10074;</button><button id="btnAhora" type="button" title="Volver a la hora actual" aria-label="Hora actual">&#8635;</button></div></div><div class="real" title="Hora real (no se pausa)"></div></div><div id="titulo">MAGIA DEL MONTE</div><div id="subt">Objetos Orbitales en FOV Observatorio Uritorco</div></div>
 <div id="side">
 <div id="filtros" class="sec">
 <div class="sub"><div class="shead" data-s="Astros"><span class="stitle"><input type="checkbox" class="master" data-master="astro" checked title="Activar/desactivar cuerpos celestes"><b>Cuerpos Celestes</b></span><span class="delta">&#9662;</span></div>
@@ -454,6 +454,9 @@ btnPausa.addEventListener('click', () => {
   else { msPausa = Date.now() - desfase; pausado = true; }            // congela este instante
   estadoBoton(); tick();
 });
+document.getElementById('btnAhora').addEventListener('click', () => {
+  pausado = false; desfase = 0; estadoBoton(); tick();                // vuelve a la hora actual
+});
 estadoBoton();
 
 // Reloj real: informativo, nunca se pausa (para ver la diferencia con la hora vista).
@@ -531,13 +534,13 @@ function aplicarConfig() {
   for (const k in CFG.css) r.setProperty('--' + k, CFG.css[k]);
   document.title = CFG.tituloPagina;
   document.getElementById('titulo').textContent = CFG.titulo;
-  const t = CFG.textos || {}, subt = document.getElementById('subt');
-  subt.textContent = t.subtitulo || '';
-  if (t.enlaceUrl) {
+  const subt = document.getElementById('subt');
+  subt.textContent = CFG.subtitulo || '';
+  if (CFG.enlaceUrl) {
     subt.appendChild(document.createTextNode(' | '));
     const a = document.createElement('a');
-    a.href = t.enlaceUrl; a.target = '_blank'; a.rel = 'noopener';
-    a.textContent = t.enlaceTexto || t.enlaceUrl;
+    a.href = CFG.enlaceUrl; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = CFG.enlaceTexto || CFG.enlaceUrl;
     subt.appendChild(a);
   }
   derivar(); dibujarMapa(null);
