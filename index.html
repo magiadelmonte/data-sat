@@ -10,6 +10,8 @@ html,body{margin:0;height:100%;background:var(--fondo);color:var(--txt);font-fam
 #head{position:fixed;left:0;top:0;right:0;height:78px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid var(--borde);z-index:6;background:var(--fondo);text-align:center}
 #titulo{font-size:28px;font-weight:bold;letter-spacing:4px;line-height:1.2}
 #subt{font-size:14px;color:var(--tenue);margin-top:4px;letter-spacing:1px}
+#subt a{color:var(--acento);text-decoration:none}
+#subt a:hover{text-decoration:underline}
 #side{position:fixed;left:0;top:78px;bottom:0;width:240px;box-sizing:border-box;display:flex;flex-direction:column;border-right:1px solid var(--borde);z-index:5;background:var(--fondo);overflow:hidden}
 .sec{padding:8px 10px;border-bottom:1px solid var(--borde);box-sizing:border-box}
 canvas{background:var(--fondo-canvas);border:0}
@@ -18,6 +20,7 @@ canvas{background:var(--fondo-canvas);border:0}
 #reloj .linea{display:flex;align-items:center;gap:10px}
 #reloj .hora{font-size:22px;font-weight:bold}
 #reloj .ctrl{display:flex;gap:4px}
+#reloj .real{font-size:12px;color:var(--tenue);margin-top:2px;font-variant-numeric:tabular-nums}
 #reloj button{background:transparent;color:var(--txt);border:1px solid var(--borde);border-radius:3px;cursor:pointer;font:15px 'Courier New',monospace;line-height:1;padding:3px 6px}
 #reloj button:hover:not(:disabled){color:var(--blanco);border-color:var(--acento)}
 #reloj button:disabled{opacity:.3;cursor:default}
@@ -50,7 +53,7 @@ canvas{background:var(--fondo-canvas);border:0}
 </head>
 <body>
 <div id="w"><canvas id="c"></canvas></div>
-<div id="head"><div id="reloj"><div class="fecha"></div><div class="linea"><div class="hora"></div><div class="ctrl"><button id="btnPausa" type="button" title="Pausar en este instante" aria-label="Pausar">&#10074;&#10074;</button><button id="btnPlay" type="button" title="Reanudar con la hora actual" aria-label="Reanudar" disabled>&#9654;</button></div></div></div><div id="titulo">OBSERVATORIO URITORCO</div><div id="subt">Registro diario de objetos orbitales</div></div>
+<div id="head"><div id="reloj"><div class="fecha"></div><div class="linea"><div class="hora"></div><div class="ctrl"><button id="btnPausa" type="button" title="Pausar en este instante" aria-label="Pausar">&#10074;&#10074;</button></div></div><div class="real" title="Hora real (no se pausa)"></div></div><div id="titulo">MAGIA DEL MONTE</div><div id="subt">Objetos Orbitales en FOV Observatorio Uritorco</div></div>
 <div id="side">
 <div id="filtros" class="sec">
 <div class="sub"><div class="shead" data-s="Astros"><span class="stitle"><input type="checkbox" class="master" data-master="astro" checked title="Activar/desactivar cuerpos celestes"><b>Cuerpos Celestes</b></span><span class="delta">&#9662;</span></div>
@@ -437,22 +440,30 @@ function mostrarConteos(cnt) {   // cantidad de objetos dibujados que correspond
 const TZ_AR = 'America/Argentina/Buenos_Aires';
 const relojFecha = document.querySelector('#reloj .fecha');
 const relojHora = document.querySelector('#reloj .hora');
+const relojReal = document.querySelector('#reloj .real');
 const btnPausa = document.getElementById('btnPausa');
-const btnPlay = document.getElementById('btnPlay');
-let pausado = false, msPausa = 0;
-function estadoBotones() { btnPausa.classList.toggle('on', pausado); btnPlay.disabled = !pausado; }
+let pausado = false, msPausa = 0, desfase = 0;   // hora vista = Date.now() - desfase
+function estadoBoton() {
+  btnPausa.classList.toggle('on', pausado);
+  btnPausa.innerHTML = pausado ? '&#9654;' : '&#10074;&#10074;';
+  btnPausa.title = pausado ? 'Reanudar desde esta hora' : 'Pausar en este instante';
+  btnPausa.setAttribute('aria-label', pausado ? 'Reanudar' : 'Pausar');
+}
 btnPausa.addEventListener('click', () => {
-  if (pausado) return;
-  pausado = true; msPausa = Date.now(); estadoBotones(); tick();   // congela este instante
+  if (pausado) { pausado = false; desfase = Date.now() - msPausa; }   // retoma donde quedamos
+  else { msPausa = Date.now() - desfase; pausado = true; }            // congela este instante
+  estadoBoton(); tick();
 });
-btnPlay.addEventListener('click', () => {
-  if (!pausado) return;
-  pausado = false; estadoBotones(); tick();                        // retoma con la hora actual
-});
-estadoBotones();
+estadoBoton();
+
+// Reloj real: informativo, nunca se pausa (para ver la diferencia con la hora vista).
+function horaReal() {
+  relojReal.textContent = new Date().toLocaleTimeString('es-AR', { hour12: false, timeZone: CFG.tz || TZ_AR });
+}
+setInterval(horaReal, 1000); horaReal();
 
 function tick() {
-  const ms = pausado ? msPausa : Date.now();
+  const ms = pausado ? msPausa : Date.now() - desfase;
   const s = sunEci(jdOf(ms)), sn = Math.hypot(s[0], s[1], s[2]), su = s.map(x => x / sn);
   const solEl = Math.asin(enu(teme2ecef(s, gmstOf(jdOf(ms))))[2]) / D2R;
   const oscuro = solEl < CFG.solOscuro;
@@ -520,7 +531,15 @@ function aplicarConfig() {
   for (const k in CFG.css) r.setProperty('--' + k, CFG.css[k]);
   document.title = CFG.tituloPagina;
   document.getElementById('titulo').textContent = CFG.titulo;
-  document.getElementById('subt').textContent = CFG.subtitulo;
+  const t = CFG.textos || {}, subt = document.getElementById('subt');
+  subt.textContent = t.subtitulo || '';
+  if (t.enlaceUrl) {
+    subt.appendChild(document.createTextNode(' | '));
+    const a = document.createElement('a');
+    a.href = t.enlaceUrl; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = t.enlaceTexto || t.enlaceUrl;
+    subt.appendChild(a);
+  }
   derivar(); dibujarMapa(null);
 }
 // El JSON de candidatos lleva la fecha en el nombre (`sat_candidatos_<AAAAMMDD>.json`)
