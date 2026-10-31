@@ -1,10 +1,10 @@
 {
  "textos": {
   "tituloPagina": "Skywatcher Network · satélites",
-  "titulo": "Skywatcher Network de MAGIA DEL MONTE",
-  "subtitulo": "Objetos Orbitales en FOV Observatorio Uritorco",
-  "enlaceTexto": "Magia del Monte en Youtube",
-  "enlaceUrl": "https://www.youtube.com/@MagiaDelMonte/streams"
+  "titulo": "OBSERVATORIO URITORCO de Magia del Monte",
+  "subtitulo": "Cielo en vivo: objetos en el campo de la cámara",
+  "enlaceTexto": "",
+  "enlaceUrl": ""
  },
  "archivos": {
   "json": "sat_candidatos_{fecha}.json",

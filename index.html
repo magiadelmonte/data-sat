@@ -12,6 +12,10 @@ html,body{margin:0;height:100%;background:var(--fondo);color:var(--txt);font-fam
 #subt{font-size:14px;color:var(--tenue);margin-top:4px;letter-spacing:1px}
 #subt a{color:var(--acento);text-decoration:none}
 #subt a:hover{text-decoration:underline}
+#vivo{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;height:48px;padding:0 12px;border:1px solid var(--borde);border-radius:10px;color:var(--txt);text-decoration:none;font-size:12px;line-height:1.15;letter-spacing:1px;text-transform:uppercase;background:transparent}
+#vivo:hover{color:var(--blanco);border-color:var(--acento)}
+#vivo b{color:var(--acento)}
+@media (max-width:640px){#vivo{font-size:10px;height:40px;right:8px;padding:0 8px}}
 #side{position:fixed;left:0;top:78px;bottom:0;width:240px;box-sizing:border-box;display:flex;flex-direction:column;border-right:1px solid var(--borde);z-index:5;background:var(--fondo);overflow:hidden}
 .sec{padding:8px 10px;border-bottom:1px solid var(--borde);box-sizing:border-box}
 canvas{background:var(--fondo-canvas);border:0}
@@ -21,7 +25,7 @@ canvas{background:var(--fondo-canvas);border:0}
 #reloj .hora{font-size:22px;font-weight:bold}
 #reloj .ctrl{display:flex;gap:4px}
 #reloj .real{font-size:22px;color:var(--tenue);margin-top:0;font-variant-numeric:tabular-nums}
-#reloj button{background:transparent;color:var(--txt);border:1px solid var(--borde);border-radius:3px;cursor:pointer;font:15px 'Courier New',monospace;line-height:1;padding:3px 6px}
+#reloj button{background:transparent;color:var(--txt);border:1px solid var(--borde);border-radius:8px;cursor:pointer;font:15px 'Courier New',monospace;line-height:1;padding:3px 6px}
 #reloj button:hover:not(:disabled){color:var(--blanco);border-color:var(--acento)}
 #reloj button:disabled{opacity:.3;cursor:default}
 #reloj button.on{color:var(--acento);border-color:var(--acento)}
@@ -53,7 +57,7 @@ canvas{background:var(--fondo-canvas);border:0}
 </head>
 <body>
 <div id="w"><canvas id="c"></canvas></div>
-<div id="head"><div id="reloj"><div class="fecha"></div><div class="linea"><div class="hora"></div><div class="ctrl"><button id="btnPausa" type="button" title="Pausar en este instante" aria-label="Pausar">&#10074;&#10074;</button><button id="btnAhora" type="button" title="Volver a la hora actual" aria-label="Hora actual">&#8635;</button></div></div><div class="real" title="Hora real (no se pausa)"></div></div><div id="titulo">MAGIA DEL MONTE</div><div id="subt">Objetos Orbitales en FOV Observatorio Uritorco</div></div>
+<div id="head"><div id="reloj"><div class="fecha"></div><div class="linea"><div class="hora"></div><div class="ctrl"><button id="btnPausa" type="button" title="Pausar en este instante" aria-label="Pausar">&#10074;&#10074;</button><button id="btnAhora" type="button" title="Volver a la hora actual" aria-label="Hora actual">&#8635;</button></div></div><div class="real" title="Hora real (no se pausa)"></div></div><div id="titulo">OBSERVATORIO URITORCO de Magia del Monte</div><div id="subt">Cielo en vivo: objetos en el campo de la cámara</div><a id="vivo" href="https://www.youtube.com/@MagiaDelMonte/streams" target="_blank" rel="noopener"><span>Uritorco</span><span>en <b>VIVO</b></span></a></div>
 <div id="side">
 <div id="filtros" class="sec">
 <div class="sub"><div class="shead" data-s="Astros"><span class="stitle"><input type="checkbox" class="master" data-master="astro" checked title="Activar/desactivar cuerpos celestes"><b>Cuerpos Celestes</b></span><span class="delta">&#9662;</span></div>
