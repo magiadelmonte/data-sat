@@ -125,6 +125,26 @@ function lunaEci(j) {   // posición geocéntrica de la Luna (km), serie abrevia
   const R = A / Math.sin(d(par)), eps = d(23.439 - 0.0130 * T);
   return [R * Math.cos(bet) * Math.cos(lam), R * (Math.cos(eps) * Math.cos(bet) * Math.sin(lam) - Math.sin(eps) * Math.sin(bet)), R * (Math.sin(eps) * Math.cos(bet) * Math.sin(lam) + Math.cos(eps) * Math.sin(bet))];
 }
+// Dibuja la Luna con su fase real: disco oscuro (luz cenicienta) + la parte
+// iluminada, orientada hacia el Sol en pantalla, con el radio angular de su
+// distancia del momento (perigeo/apogeo, ~±5 %). Misma funcion que usa AER
+// (aer/web/aer_astro.js): si se cambia una, cambiar la otra.
+function dibujarLuna(g, x, y, r, ilum, angSol, lit, oscuro) {
+  const k = Math.max(0, Math.min(1, ilum));
+  g.save();
+  g.translate(x, y); g.rotate(angSol || 0);
+  g.beginPath(); g.arc(0, 0, r, 0, 6.2832);
+  g.fillStyle = oscuro; g.fill();
+  if (k > 0.02) {
+    const rx = r * Math.abs(1 - 2 * k);
+    g.beginPath();
+    g.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false);      // mitad hacia el Sol
+    g.ellipse(0, 0, rx, r, 0, Math.PI / 2, -Math.PI / 2, k < 0.5);
+    g.closePath();
+    g.fillStyle = lit; g.fill();
+  }
+  g.restore();
+}
 function teme2ecef(r, g) { const c = Math.cos(g), s = Math.sin(g); return [r[0] * c + r[1] * s, -r[0] * s + r[1] * c, r[2]]; }
 function enu(e) {   // ECEF -> vector unitario ENU + distancia
   const dx = e[0] - OBS[0], dy = e[1] - OBS[1], dz = e[2] - OBS[2];
@@ -379,7 +399,7 @@ function dibujarAstros(ms, su, dibuja) {   // dibuja=false: solo cuenta (con un 
   }
   // Sol, Luna y planetas
   const ts = on('SISTEMA');
-  const sv = enu(teme2ecef(sunEci(j), gm)), ps = pix(sv);
+  const se = sunEci(j), sv = enu(teme2ecef(se, gm)), ps = pix(sv);
   if (dentroP(ps, 20)) {
     cn.SISTEMA++;
     if (ts) { const rs = Math.max(5, f * Math.tan(0.265 * D2R)); ctx.fillStyle = CFG.col.sol; ctx.beginPath(); ctx.arc(ps[0], ps[1], rs, 0, 6.2832); ctx.fill(); rotulo(ps, 'SOL', rs + 4, CFG.col.sol, 1); }
@@ -388,9 +408,17 @@ function dibujarAstros(ms, su, dibuja) {   // dibuja=false: solo cuenta (con un 
   if (dentroP(lp, 20)) {
     cn.SISTEMA++;
     if (ts) {
-      const ilumL = (1 - (lm[0] * su[0] + lm[1] * su[1] + lm[2] * su[2]) / Math.hypot(lm[0], lm[1], lm[2])) / 2 * 100, rl = Math.max(4, f * Math.tan(0.26 * D2R));
-      ctx.fillStyle = 'rgba(235,235,215,' + (0.35 + ilumL / 160).toFixed(2) + ')'; ctx.beginPath(); ctx.arc(lp[0], lp[1], rl, 0, 6.2832); ctx.fill();
-      rotulo(lp, 'LUNA ' + Math.round(ilumL) + '%', rl + 4, CFG.col.txt, 1);
+      // Fase y tamaño reales: radio angular = asin(1737.4 km / distancia).
+      const distL = Math.hypot(lm[0], lm[1], lm[2]);
+      const ilumL = (1 - (lm[0] * su[0] + lm[1] * su[1] + lm[2] * su[2])) / 2;
+      const rl = Math.max(2, f * Math.tan(Math.asin(1737.4 / distL)));
+      const creciente = (lm[0] * se[1] - lm[1] * se[0]) > 0;
+      const angSol = Math.atan2(ps[1] - lp[1], ps[0] - lp[0]);
+      dibujarLuna(ctx, lp[0], lp[1], rl, ilumL, angSol,
+                  'rgba(235,235,215,' + (0.75 + ilumL / 4).toFixed(2) + ')',
+                  'rgba(235,235,215,.10)');
+      rotulo(lp, 'LUNA ' + Math.round(ilumL * 100) + '% ' + (creciente ? 'CREC.' : 'MENG.'),
+             rl + 4, CFG.col.txt, 1);
     }
   }
   for (const p of PLANETAS) {
