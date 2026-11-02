@@ -411,7 +411,8 @@ function dibujarAstros(ms, su, dibuja) {   // dibuja=false: solo cuenta (con un 
       // Fase y tamaño reales: radio angular = asin(1737.4 km / distancia).
       const distL = Math.hypot(lm[0], lm[1], lm[2]);
       const ilumL = (1 - (lm[0] * su[0] + lm[1] * su[1] + lm[2] * su[2])) / 2;
-      const rl = Math.max(2, f * Math.tan(Math.asin(1737.4 / distL)));
+      // +50 % respecto del tamaño angular real (pedido): sigue variando con la distancia.
+      const rl = Math.max(3, 1.5 * f * Math.tan(Math.asin(1737.4 / distL)));
       const creciente = (lm[0] * se[1] - lm[1] * se[0]) > 0;
       // Dirección al Sol en pantalla; si está fuera del encuadre (de noche siempre)
       // `ps` es null: se interpola 5 % hacia el Sol y, si tampoco, luz desde abajo.
@@ -426,8 +427,7 @@ function dibujarAstros(ms, su, dibuja) {   // dibuja=false: solo cuenta (con un 
       dibujarLuna(ctx, lp[0], lp[1], rl, ilumL, angSol,
                   'rgba(235,235,215,' + (0.75 + ilumL / 4).toFixed(2) + ')',
                   'rgba(235,235,215,.10)');
-      rotulo(lp, 'LUNA ' + Math.round(ilumL * 100) + '% ' + (creciente ? 'CREC.' : 'MENG.'),
-             rl + 4, CFG.col.txt, 1);
+      rotulo(lp, 'LUNA', rl + 4, CFG.col.txt, 1);
     }
   }
   for (const p of PLANETAS) {
