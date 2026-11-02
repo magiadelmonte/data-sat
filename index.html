@@ -413,7 +413,16 @@ function dibujarAstros(ms, su, dibuja) {   // dibuja=false: solo cuenta (con un 
       const ilumL = (1 - (lm[0] * su[0] + lm[1] * su[1] + lm[2] * su[2])) / 2;
       const rl = Math.max(2, f * Math.tan(Math.asin(1737.4 / distL)));
       const creciente = (lm[0] * se[1] - lm[1] * se[0]) > 0;
-      const angSol = Math.atan2(ps[1] - lp[1], ps[0] - lp[0]);
+      // Dirección al Sol en pantalla; si está fuera del encuadre (de noche siempre)
+      // `ps` es null: se interpola 5 % hacia el Sol y, si tampoco, luz desde abajo.
+      let ref = ps;
+      if (!ref) {
+        const mix = [lm[0] + (se[0] - lm[0]) * 0.05,
+                     lm[1] + (se[1] - lm[1]) * 0.05,
+                     lm[2] + (se[2] - lm[2]) * 0.05];
+        ref = pix(enu(teme2ecef(mix, gm)));
+      }
+      const angSol = ref ? Math.atan2(ref[1] - lp[1], ref[0] - lp[0]) : Math.PI / 2;
       dibujarLuna(ctx, lp[0], lp[1], rl, ilumL, angSol,
                   'rgba(235,235,215,' + (0.75 + ilumL / 4).toFixed(2) + ')',
                   'rgba(235,235,215,.10)');
