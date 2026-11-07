@@ -554,7 +554,10 @@ function tick() {
   sierra(true);   // el cerro tapa lo que pasa detrás
   if (selId.value) panelSel(ms, su);
   const dt = new Date(ms), tz = CFG.tz || TZ_AR;
-  relojFecha.textContent = dt.toLocaleDateString('es-AR', { timeZone: tz });
+  // dd/mm/aaaa con día y mes a 2 dígitos (toLocaleDateString es-AR deja 1 dígito).
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(dt).reduce((acc, x) => (acc[x.type] = x.value, acc), {});
+  relojFecha.textContent = f.day + '/' + f.month + '/' + f.year;
   relojHora.textContent = dt.toLocaleTimeString('es-AR', { hour12: false, timeZone: tz });
 }
 
