@@ -293,6 +293,8 @@ let cielo_cv = null, cielo_bucket = null, cielo_key = '', cielo_cnt = {};
 let cielo_estrellas = [];   // posiciones del ultimo calculo, para el tooltip
 
 function dibujarCielo(ms) {
+  if (typeof astCieloDibujar !== 'function')
+    return {SISTEMA: 0, ESTRELLAS: 0, CONSTEL: 0, PROFUNDO: 0};
   if (!cielo_cv) cielo_cv = document.createElement('canvas');
   if (cielo_cv.width !== W || cielo_cv.height !== H) {
     cielo_cv.width = W; cielo_cv.height = H; cielo_bucket = null;
