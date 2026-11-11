@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>Cielo Nocturno | Observatorio Uritorco - Magia del Monte</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.1.3/satellite.min.js"></script>
+<script>window.AST_BASE = '';</script>
+<script src="ast_cielo.js?v=20261111a"></script>
 <style>
 html,body{margin:0;height:100%;background:var(--fondo);color:var(--txt);font-family:'Courier New',monospace;overflow:hidden}
 #w{margin-left:240px;margin-top:78px;width:calc(100vw - 240px);height:calc(100vh - 78px);display:flex;align-items:center;justify-content:center}
@@ -116,34 +118,6 @@ function sunEci(j) {
   const lam = (L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * D2R, eps = (23.439 - 4e-7 * n) * D2R;
   const R = (1.00014 - 0.01671 * Math.cos(g) - 0.00014 * Math.cos(2 * g)) * AU;
   return [R * Math.cos(lam), R * Math.cos(eps) * Math.sin(lam), R * Math.sin(eps) * Math.sin(lam)];
-}
-function lunaEci(j) {   // posición geocéntrica de la Luna (km), serie abreviada (~0.3°)
-  const T = (j - 2451545) / 36525, d = x => x * D2R, sn = x => Math.sin(d(x)), cs = x => Math.cos(d(x));
-  const lam = d(218.32 + 481267.881 * T + 6.29 * sn(135 + 477198.87 * T) - 1.27 * sn(259.3 - 413335.36 * T) + 0.66 * sn(235.7 + 890534.22 * T) + 0.21 * sn(269.9 + 954397.74 * T) - 0.19 * sn(357.5 + 35999.05 * T) - 0.11 * sn(186.5 + 966404.03 * T));
-  const bet = d(5.13 * sn(93.3 + 483202.02 * T) + 0.28 * sn(228.2 + 960400.89 * T) - 0.28 * sn(318.3 + 6003.15 * T) - 0.17 * sn(217.6 - 407332.21 * T));
-  const par = 0.9508 + 0.0518 * cs(135 + 477198.87 * T) + 0.0095 * cs(259.3 - 413335.36 * T) + 0.0078 * cs(235.7 + 890534.22 * T) + 0.0028 * cs(269.9 + 954397.74 * T);
-  const R = A / Math.sin(d(par)), eps = d(23.439 - 0.0130 * T);
-  return [R * Math.cos(bet) * Math.cos(lam), R * (Math.cos(eps) * Math.cos(bet) * Math.sin(lam) - Math.sin(eps) * Math.sin(bet)), R * (Math.sin(eps) * Math.cos(bet) * Math.sin(lam) + Math.cos(eps) * Math.sin(bet))];
-}
-// Dibuja la Luna con su fase real: disco oscuro (luz cenicienta) + la parte
-// iluminada, orientada hacia el Sol en pantalla, con el radio angular de su
-// distancia del momento (perigeo/apogeo, ~±5 %). Misma funcion que usa AER
-// (aer/web/aer_astro.js): si se cambia una, cambiar la otra.
-function dibujarLuna(g, x, y, r, ilum, angSol, lit, oscuro) {
-  const k = Math.max(0, Math.min(1, ilum));
-  g.save();
-  g.translate(x, y); g.rotate(angSol || 0);
-  g.beginPath(); g.arc(0, 0, r, 0, 6.2832);
-  g.fillStyle = oscuro; g.fill();
-  if (k > 0.02) {
-    const rx = r * Math.abs(1 - 2 * k);
-    g.beginPath();
-    g.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false);      // mitad hacia el Sol
-    g.ellipse(0, 0, rx, r, 0, Math.PI / 2, -Math.PI / 2, k < 0.5);
-    g.closePath();
-    g.fillStyle = lit; g.fill();
-  }
-  g.restore();
 }
 function teme2ecef(r, g) { const c = Math.cos(g), s = Math.sin(g); return [r[0] * c + r[1] * s, -r[0] * s + r[1] * c, r[2]]; }
 function enu(e) {   // ECEF -> vector unitario ENU + distancia
@@ -310,133 +284,44 @@ function dibujarMapa(g) {
 }
 
 // ---------------- ASTROS ----------------
-let ESTRELLAS = [], ESTR = [], NOMBRES = {}, PROFUNDO = [], CONSTEL = { n: {}, l: {} }, estrDib = [];   // se cargan desde catalogo_astro.json
+// ---------------- ASTROS (motor unico del modulo AST) ----------------
+// El cielo (estrellas, constelaciones, espacio profundo, Sol/Luna/planetas) lo
+// dibuja ast_cielo.js. Aca se cachea en un canvas aparte y se recalcula
+// cada `visor.astroRefreshMs` (60 s), no en cada tick de 1 s: el cielo se mueve
+// ~15 grados por hora, no hace falta mas.
+let cielo_cv = null, cielo_bucket = null, cielo_key = '', cielo_cnt = {};
+let cielo_estrellas = [];   // posiciones del ultimo calculo, para el tooltip
 
-
-
-
-const PLANETAS = [   // elementos keplerianos J2000 (Standish): a, e, I, L, long. perihelio, long. nodo + variación por siglo; r = radio del punto
-  { n: 'Mercurio', r: 3, el: [0.38709927, 0.00000037, 0.20563593, 0.00001906, 7.00497902, -0.00594749, 252.25032350, 149472.67411175, 77.45779628, 0.16047689, 48.33076593, -0.12534081] },
-  { n: 'Venus', r: 5, el: [0.72333566, 0.00000390, 0.00677672, -0.00004107, 3.39467605, -0.00078890, 181.97909950, 58517.81538729, 131.60246718, 0.00268329, 76.67984255, -0.27769418] },
-  { n: 'Marte', r: 3.5, el: [1.52371034, 0.00001847, 0.09339410, 0.00007882, 1.84969142, -0.00813131, -4.55343205, 19140.30268499, -23.94362959, 0.44441088, 49.55953891, -0.29257343] },
-  { n: 'Júpiter', r: 4.5, el: [5.20288700, -0.00011607, 0.04838624, -0.00013253, 1.30439695, -0.00183714, 34.39644051, 3034.74612775, 14.72847983, 0.21252668, 100.47390909, 0.20469106] },
-  { n: 'Saturno', r: 3.5, el: [9.53667594, -0.00125060, 0.05386179, -0.00050991, 2.48599187, 0.00193609, 49.95424423, 1222.49362201, 92.59887831, -0.41897216, 113.66242448, -0.28867794] },
-  { n: 'Urano', r: 2, el: [19.18916464, -0.00196176, 0.04725744, -0.00004397, 0.77263783, -0.00242939, 313.23810451, 428.48202785, 170.95427630, 0.40805281, 74.01692503, 0.04240589] },
-  { n: 'Neptuno', r: 2, el: [30.06992276, 0.00026291, 0.00859048, 0.00005105, 1.77004347, 0.00035372, -55.12002969, 218.45945325, 44.96476227, -0.32241464, 131.78422574, -0.00508664] }
-];
-const TIERRA_EL = [1.00000261, 0.00000562, 0.01671123, -0.00004392, -0.00001531, -0.01294668, 100.46457166, 35999.37244981, 102.93768193, 0.32327364, 0, 0];
-function helio(el, T) {   // posición heliocéntrica eclíptica J2000 (UA)
-  const v = i => el[2 * i] + el[2 * i + 1] * T, a = v(0), e = v(1), I = v(2) * D2R, L = v(3), w = v(4), O = v(5) * D2R;
-  let M = ((L - w) % 360 + 540) % 360 - 180; M *= D2R;
-  let E = M + e * Math.sin(M); for (let i = 0; i < 8; i++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
-  const xp = a * (Math.cos(E) - e), yp = a * Math.sqrt(1 - e * e) * Math.sin(E), om = (w * D2R - O);
-  const co = Math.cos(om), so = Math.sin(om), cO = Math.cos(O), sO = Math.sin(O), cI = Math.cos(I), sI = Math.sin(I);
-  return [(co * cO - so * sO * cI) * xp + (-so * cO - co * sO * cI) * yp, (co * sO + so * cO * cI) * xp + (-so * sO + co * cO * cI) * yp, so * sI * xp + co * sI * yp];
-}
-function planetaRaDec(p, T) {   // AR/Dec geocéntricas J2000 (°)
-  const h = helio(p.el, T), t = helio(TIERRA_EL, T), g = [h[0] - t[0], h[1] - t[1], h[2] - t[2]], ep = 23.43928 * D2R;
-  const x = g[0], y = g[1] * Math.cos(ep) - g[2] * Math.sin(ep), z = g[1] * Math.sin(ep) + g[2] * Math.cos(ep);
-  return [((Math.atan2(y, x) / D2R) + 360) % 360, Math.asin(z / Math.hypot(x, y, z)) / D2R];
-}
-function radecEnu(ra, dec, yrs, gmst) {   // AR/Dec J2000 (°) -> vector ENU unitario (con precesión)
-  const a = ra * D2R, d = dec * D2R, k = D2R / 3600;
-  const ra2 = a + (46.1 + 20.0 * Math.sin(a) * Math.tan(d)) * k * yrs, de2 = d + 20.0 * Math.cos(a) * k * yrs;
-  const H = gmst + lo - ra2, cd = Math.cos(de2), sd = Math.sin(de2);
-  return [-cd * Math.sin(H), sd * cp - cd * sp * Math.cos(H), sd * sp + cd * cp * Math.cos(H)];
-}
-function dibujarAstros(ms, su, dibuja) {   // dibuja=false: solo cuenta (con un "solo" activo)
-  const j = jdOf(ms), gm = gmstOf(j), T = (j - 2451545) / 36525, yrs = T * 100, cn = { SISTEMA: 0, ESTRELLAS: 0, CONSTEL: 0, PROFUNDO: 0 };
-  const dim = 1; estrDib = [];   // misma opacidad de día y de noche
-  const dentroP = (p, m) => p && p[0] >= -(m || 0) && p[0] <= W + (m || 0) && p[1] >= -(m || 0) && p[1] <= H + (m || 0);
-  const rotulo = (p, nom, dx, col, a) => { ctx.globalAlpha = a; ctx.fillStyle = col; ctx.font = '11px Courier New'; ctx.fillText(nom, p[0] + dx, p[1] + 4); ctx.globalAlpha = 1; };
-  const on = k => dibuja && FILTROS.astro.has(k);
-  // constelaciones (líneas al 50% de la intensidad anterior)
-  const tc = on('CONSTEL'), vis = {};
-  if (tc) { ctx.globalAlpha = CFG.constelAlfa; ctx.strokeStyle = CFG.col.constel; ctx.lineWidth = 0.8; ctx.setLineDash([]); }
-  for (const id in CONSTEL.l) {
-    for (const seg of CONSTEL.l[id]) {
-      ctx.beginPath(); let pen = false;
-      for (const q of seg) {
-        const p = pix(radecEnu(q[0], q[1], yrs, gm));
-        if (!p) { pen = false; continue; }
-        if (!pen) { ctx.moveTo(p[0], p[1]); pen = true; } else ctx.lineTo(p[0], p[1]);
-        if (p[0] > 0 && p[0] < W && p[1] > 0 && p[1] < H) { const t = vis[id] || (vis[id] = [0, 0, 0]); t[0] += p[0]; t[1] += p[1]; t[2]++; }
-      }
-      if (tc) ctx.stroke();
-    }
+function dibujarCielo(ms) {
+  if (!cielo_cv) cielo_cv = document.createElement('canvas');
+  if (cielo_cv.width !== W || cielo_cv.height !== H) {
+    cielo_cv.width = W; cielo_cv.height = H; cielo_bucket = null;
   }
-  for (const id in vis) if (vis[id][2] >= 2) cn.CONSTEL++;
-  if (tc) {
-    ctx.globalAlpha = 0.7; ctx.fillStyle = CFG.col.constel; ctx.font = '12px Courier New';
-    for (const id in vis) { const t = vis[id]; if (t[2] < 2) continue; const nom = CONSTEL.n[id][0].toUpperCase(); ctx.fillText(nom, t[0] / t[2] - ctx.measureText(nom).width / 2, t[1] / t[2]); }
+  const bucket = Math.floor(ms / (CFG.astroRefreshMs || 60000));
+  const key = [CFG.az0, CFG.el0, CFG.fovH, CFG.fovV, CFG.lat, CFG.lon,
+    FILTROS.astro.has('SISTEMA'), FILTROS.astro.has('ESTRELLAS'),
+    FILTROS.astro.has('CONSTEL'), FILTROS.astro.has('PROFUNDO')].join('|');
+  if (bucket !== cielo_bucket || key !== cielo_key) {
+    const sk = cielo_cv.getContext('2d');
+    sk.clearRect(0, 0, W, H);
+    const estrellas = [];
+    const res = astCieloDibujar({
+      g: sk, P: (az, el) => pix(azel(az, el)), W: W, H: H, focal: f,
+      ts: ms, lat: CFG.lat, lon: CFG.lon, colors: CFG.col,
+      constelAlfa: CFG.constelAlfa, texto: 1, noche: false,
+      filtros: {SISTEMA: FILTROS.astro.has('SISTEMA'),
+                 ESTRELLAS: FILTROS.astro.has('ESTRELLAS'),
+                 CONSTEL: FILTROS.astro.has('CONSTEL'),
+                 PROFUNDO: FILTROS.astro.has('PROFUNDO')},
+      estrellas: estrellas,
+      listo: () => { cielo_bucket = null; tick(); }
+    });
+    cielo_cnt = res || {SISTEMA: 0, ESTRELLAS: 0, CONSTEL: 0, PROFUNDO: 0};
+    cielo_estrellas = estrellas;
+    cielo_bucket = bucket; cielo_key = key;
   }
-  ctx.globalAlpha = 1;
-  // estrellas: todas (sueltas y de constelaciones), con tamaño y brillo según la magnitud
-  const te = on('ESTRELLAS');
-  ctx.fillStyle = CFG.col.estrella;
-  for (let i = 0; i < ESTR.length; i += 4) {
-    const p = pix(radecEnu(ESTR[i] / 100, ESTR[i + 1] / 100, yrs, gm));
-    if (!dentroP(p)) continue;
-    cn.ESTRELLAS++;
-    if (te) { const mg = ESTR[i + 2] / 10, r = Math.max(0.6, Math.min(5.5, 0.5 + 0.55 * (6.5 - mg))); ctx.globalAlpha = dim * Math.min(0.95, 0.35 + 0.1 * (6 - mg)); ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, 6.2832); ctx.fill(); estrDib.push([p[0], p[1], r, i]); }
-  }
-  ctx.globalAlpha = 1;
-  if (te) for (const e of ESTRELLAS) { const p = pix(radecEnu(e[1] * 15, e[2], yrs, gm)); if (dentroP(p)) rotulo(p, e[0], Math.max(0.6, Math.min(5.5, 0.5 + 0.55 * (6.5 - e[3]))) + 4, CFG.col.estrella, dim * 0.95); }
-  // galaxias y nebulosas: mancha difusa según magnitud (los cúmulos abiertos se ven por sus estrellas: solo rótulo)
-  const tp = on('PROFUNDO');
-  for (const e of PROFUNDO) {
-    const p = pix(radecEnu(e[1], e[2], yrs, gm));
-    if (!dentroP(p)) continue;
-    cn.PROFUNDO++;
-    if (!tp) continue;
-    let dx = 6;
-    if (e[3] !== 'oc') {
-      const r = Math.max(2.5, Math.min(9, 2 + 0.9 * (7 - e[4]))), g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], r);
-      g.addColorStop(0, 'rgba(143,184,200,' + (0.9 * dim).toFixed(2) + ')'); g.addColorStop(1, 'rgba(143,184,200,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, 6.2832); ctx.fill(); dx = r + 4;
-    }
-    rotulo(p, e[0], dx, CFG.col.profundo, 0.9 * dim);
-  }
-  // Sol, Luna y planetas
-  const ts = on('SISTEMA');
-  const se = sunEci(j), sv = enu(teme2ecef(se, gm)), ps = pix(sv);
-  if (dentroP(ps, 20)) {
-    cn.SISTEMA++;
-    if (ts) { const rs = Math.max(5, f * Math.tan(0.265 * D2R)); ctx.fillStyle = CFG.col.sol; ctx.beginPath(); ctx.arc(ps[0], ps[1], rs, 0, 6.2832); ctx.fill(); rotulo(ps, 'SOL', rs + 4, CFG.col.sol, 1); }
-  }
-  const lm = lunaEci(j), lmE = enu(teme2ecef(lm, gm)), lp = pix(lmE);
-  if (dentroP(lp, 20)) {
-    cn.SISTEMA++;
-    if (ts) {
-      // Fase y tamaño reales: radio angular = asin(1737.4 km / distancia).
-      const distL = Math.hypot(lm[0], lm[1], lm[2]);
-      const ilumL = (1 - (lm[0] * su[0] + lm[1] * su[1] + lm[2] * su[2])) / 2;
-      // +50 % respecto del tamaño angular real (pedido): sigue variando con la distancia.
-      const rl = Math.max(3, 1.5 * f * Math.tan(Math.asin(1737.4 / distL)));
-      const creciente = (lm[0] * se[1] - lm[1] * se[0]) > 0;
-      // Dirección al Sol en pantalla; si está fuera del encuadre (de noche siempre)
-      // `ps` es null: se interpola 5 % hacia el Sol y, si tampoco, luz desde abajo.
-      let ref = ps;
-      if (!ref) {
-        const mix = [lm[0] + (se[0] - lm[0]) * 0.05,
-                     lm[1] + (se[1] - lm[1]) * 0.05,
-                     lm[2] + (se[2] - lm[2]) * 0.05];
-        ref = pix(enu(teme2ecef(mix, gm)));
-      }
-      const angSol = ref ? Math.atan2(ref[1] - lp[1], ref[0] - lp[0]) : Math.PI / 2;
-      dibujarLuna(ctx, lp[0], lp[1], rl, ilumL, angSol,
-                  'rgba(235,235,215,' + (0.75 + ilumL / 4).toFixed(2) + ')',
-                  'rgba(235,235,215,.10)');
-      rotulo(lp, 'LUNA', rl + 4, CFG.col.txt, 1);
-    }
-  }
-  for (const p of PLANETAS) {
-    const rd = planetaRaDec(p, T), pp = pix(radecEnu(rd[0], rd[1], yrs, gm));
-    if (!dentroP(pp)) continue;
-    cn.SISTEMA++;
-    if (ts) { ctx.globalAlpha = dim * 0.95; ctx.fillStyle = CFG.col.planeta; ctx.beginPath(); ctx.arc(pp[0], pp[1], p.r, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1; rotulo(pp, p.n, p.r + 4, CFG.col.planeta, dim * 0.95); }
-  }
-  return cn;
+  ctx.drawImage(cielo_cv, 0, 0);
+  return cielo_cnt;
 }
 
 // nombre de la estrella al pasar el mouse
@@ -444,10 +329,9 @@ const tip = document.getElementById('tip');
 cv.addEventListener('mousemove', e => {
   const b = cv.getBoundingClientRect(), x = (e.clientX - b.left) * cv.width / b.width, y = (e.clientY - b.top) * cv.height / b.height;
   let best = null, bd = 1e9;
-  for (const d of estrDib) { const dd = Math.hypot(x - d[0], y - d[1]); if (dd < Math.max(d[2] + 4, 7) && dd < bd) { bd = dd; best = d; } }
+  for (const d of cielo_estrellas) { const dd = Math.hypot(x - d.x, y - d.y); if (dd < Math.max(d.r + 4, 7) && dd < bd) { bd = dd; best = d; } }
   if (!best) { tip.style.display = 'none'; return; }
-  const hip = ESTR[best[3] + 3];
-  tip.textContent = (NOMBRES[hip] || 'HIP ' + hip) + ' · mag ' + (ESTR[best[3] + 2] / 10).toFixed(1);
+  tip.textContent = (best.name || ('HIP ' + best.hip)) + ' · mag ' + (+best.mag).toFixed(1);
   tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY + 12) + 'px'; tip.style.display = 'block';
 });
 cv.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
@@ -513,7 +397,7 @@ function tick() {
   const oscuro = solEl < CFG.solOscuro;
   const esOjo = (o, rng) => oscuro && o.orbita === 'LEO' && (o.rcs === 'LARGE' || (o.rcs === 'MEDIUM' && rng < CFG.rngMedKm));
   ctx.clearRect(0, 0, W, H); grilla();
-  const cnt = {}, ac = dibujarAstros(ms, su, true);
+  const cnt = {}, ac = dibujarCielo(ms);
   for (const k in ac) cnt['astro:' + k] = ac[k];
 
   const dentro = []; dibujados = [];
@@ -608,7 +492,6 @@ function pedirCandidatos(i) {
 function arrancar() {
   fetch(CONFIG_URL).then(r => { if (!r.ok) throw 0; return r.json(); })
     .then(c => { CFG = {}; for (const g in c) { if (g === 'colores') CFG.col = c[g]; else if (g === 'css') CFG.css = c[g]; else Object.assign(CFG, c[g]); } aplicarConfig(); })
-    .then(() => fetch(CFG.catalogo)).then(r => r.json()).then(c => { ESTRELLAS = c.estrellas; ESTR = c.estr; NOMBRES = c.nom || {}; PROFUNDO = c.profundo; CONSTEL = c.constel; }).catch(e => { if (!CFG.lat) throw e; })
     .then(() => CFG.json.includes('{fecha}') ? pedirCandidatos(0) : fetch(CFG.json).then(r => { if (!r.ok) throw 0; return r; }))
     .then(r => r.json()).then(iniciar)
     .catch(() => { if (CFG.lat) pedirArchivo(); else msg('No se pudo cargar ' + CONFIG_URL + '.'); });
