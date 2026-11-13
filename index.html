@@ -492,7 +492,10 @@ function pedirCandidatos(i) {
   return fetch(url, { cache: 'no-store' }).then(r => r.ok ? r : (i + 1 < DIAS_JSON ? pedirCandidatos(i + 1) : Promise.reject(new Error(url))));
 }
 function arrancar() {
-  fetch(CONFIG_URL).then(r => { if (!r.ok) throw 0; return r.json(); })
+  // `?t=` + no-store: la config se republica desde SAT y el navegador no debe
+  // quedarse con la copia vieja (era lo que hacía ver otro cielo en data-sat).
+  fetch(CONFIG_URL + '?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => { if (!r.ok) throw 0; return r.json(); })
     .then(c => { CFG = {}; for (const g in c) { if (g === 'colores') CFG.col = c[g]; else if (g === 'css') CFG.css = c[g]; else Object.assign(CFG, c[g]); } aplicarConfig(); })
     .then(() => CFG.json.includes('{fecha}') ? pedirCandidatos(0) : fetch(CFG.json).then(r => { if (!r.ok) throw 0; return r; }))
     .then(r => r.json()).then(iniciar)
