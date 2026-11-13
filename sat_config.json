@@ -296,14 +296,14 @@
   }
  },
  "astros": {
-  "constelAlfa": 0.225
+  "constelAlfa": 0.5
  },
  "colores": {
   "txt": "#d4c9b0",
   "ok": "#4f8a6d",
   "seleccion": "#ffd84a",
-  "constel": "#8fb0d8",
-  "estrella": "#cfd8ff",
+  "constel": "#6fbf8a",
+  "estrella": "#8fdc7a",
   "profundo": "#8fb8c8",
   "sol": "#ffe27a",
   "planeta": "#ffb877",
